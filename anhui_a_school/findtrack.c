@@ -15,7 +15,7 @@ int   Width[RowMax + 1] = { 2,3,3,3,4,4,5,5,6,6,
 					   18,18,20,20,22,22,24,24,26,26,
 					   28,30,31,32,32,34,36,36,38,39,
 					   41,41,43,43,45,45,47,47,49,50,
-					   50,51,52,54,55,56,57,58,59,60,61 };;
+					   50,51,52,54,55,56,57,58,59,60,61 };//宽度数组
 
 int   MidPri = 40;//当前行中点搜索起始点,取40,10,70
 int   LastLine = 0;//最后一行，动态前瞻
@@ -28,17 +28,18 @@ int   RightLoseStart = 0;//记录右边边丢线的开始行
 int   WhiteStart = 0;
 
 
-/*********define for GetBlackEndParam**********/
-int BlackEndMR = 0;
-int BlackEndML = 0;
-int BlackEndLL = 0;
-int BlackEndRR = 0;
-int BlackEndL = 0;
-int BlackEndM = 0;
-int BlackEndR = 0;
+//define for GetBlackEndParam**********/
+
+int BlackEndMR = 0;//截至行50
+int BlackEndML = 0;//截至行30
+int BlackEndLL = 0;//截至行10
+int BlackEndRR = 0;//截至行70
+int BlackEndL = 0;//截至行20
+int BlackEndM = 0;//截至行40
+int BlackEndR = 0;//截至行60
 int BlackEndMaxMax = 0;
 int BlackEndMax = 0;
-int DropRow = 0;
+int DropRow = 0;//封顶的行数,从前往后数，应该是黑格
 
 /*********define for FindInflectionPoint()**********/
 
@@ -101,12 +102,12 @@ unsigned char BreakStartRFlag = 0;
 
 /**
  * \brief 设定初值
- * \par
- * 中线：ColumnMax / 2	\n
+ * \par 手段
+ * 遍历设置每一行对应的赛道宽度，本文件内不调用
+ * \par 数值
  * 左线：0	\n
- * 右线：ColumnMax
- * \par
- * 设置每一行对应的赛道宽度，本文件内不调用
+ * 中线：ColumnMax / 2 = 40	\n
+ * 右线：ColumnMax = 80
  */
 void SetInitVal()
 {
@@ -122,19 +123,17 @@ void SetInitVal()
 
 }
 
-
-//
-//
-//
-//
 /**
  * \brief 全行扫描和边缘结合提取赛道的中线
- * \par
- * 前十行全行扫描
- * \par
+ * \par 手段
+ * 前十行全行扫描\n
  * 后面50行，根据上一行的寻线情况来决定当前行的寻线方式和起点
- * \par
+ * \par 调用形式
  * 外部调用
+ * \param[out]	MiddleLine[61]
+ * \param[out]	LeftEdge[61]
+ * \param[out]	RightEdge[61]
+ *
  */
 void SearchCenterBlackline(void)
 {
@@ -662,57 +661,90 @@ void SearchCenterBlackline(void)
 	}
 }
 
-
-//提取图像的特征
-//选取几列，从图像底部往上扫描
-//内部调用
+/**
+ * \brief //提取图像的特征
+ * \par
+ * //选取几列，从图像底部往上扫描
+ * \par
+ * 暂时没发现有什么用
+ * \param[out] DropRow 封顶行数
+ */
 void GetBlackEndParam()//获取黑线截止行
 {
-
-	unsigned char LEndFlag = 0;//标志位
-	unsigned char MEndFlag = 0;
-	unsigned char REndFlag = 0;
-	unsigned char MREndFlag = 0;
-	unsigned char MLEndFlag = 0;
-	unsigned char LLEndFlag = 0;
-	unsigned char RREndFlag = 0;
+	/*
+	 * 前两格出现两黑之后标志置1
+	 */
+	unsigned char LEndFlag = 0;//20停止扫描标志
+	unsigned char MEndFlag = 0;//40停止扫描标志
+	unsigned char REndFlag = 0;//60停止扫描标志
+	unsigned char MREndFlag = 0;//50停止扫描标志
+	unsigned char MLEndFlag = 0;//30停止扫描标志
+	unsigned char LLEndFlag = 0;//10停止扫描标志
+	unsigned char RREndFlag = 0;//70停止扫描标志
 
 	int i = 0;
 
-	BlackEndMR = 0;//清零
-	BlackEndML = 0;
-	BlackEndLL = 0;
-	BlackEndRR = 0;
-	BlackEndL = 0;
-	BlackEndM = 0;
-	BlackEndR = 0;
+	BlackEndMR = 0;//截至行50
+	BlackEndML = 0;//截至行30
+	BlackEndLL = 0;//截至行10
+	BlackEndRR = 0;//截至行70
+	BlackEndL = 0;//截至行20
+	BlackEndM = 0;//截至行40
+	BlackEndR = 0;//截至行60
 
+
+	/*
+	 * 扫描所有行[3,60]
+	 */
 	for (i = RowMax - 1; i >= 3; i--)
 	{
+		/*
+		 * 找中黑线截至行40
+		 */
 		if (img[i][ColumnMax / 2] == White_Point && !MEndFlag)//!MEndFlag=1 //40
 		{
 			BlackEndM++;//中黑线截至行
 		}
-		else if (i > 1 && img[i - 1][ColumnMax / 2] == Black_Point && img[i - 2][ColumnMax / 2] == Black_Point)//连续两行是黑色        
+		else if (
+			i > 1 && 
+			img[i - 1][ColumnMax / 2] == Black_Point && //连续两行是黑色
+			img[i - 2][ColumnMax / 2] == Black_Point//连续两行是黑色
+			)
 		{
 			MEndFlag = 1;
 		}
+		/*
+		 * 找左黑线截至行20
+		 */
 		if (img[i][ColumnMax / 4] == White_Point && !LEndFlag)//20
 		{
 			BlackEndL++;//左黑线截至行
 		}
-		else if (i > 1 && img[i - 1][ColumnMax / 4] == Black_Point && img[i - 2][ColumnMax / 4] == Black_Point)
+		else if (
+			i > 1 &&
+			img[i - 1][ColumnMax / 4] == Black_Point &&
+			img[i - 2][ColumnMax / 4] == Black_Point)
 		{
 			LEndFlag = 1;
 		}
+		/*
+		 * 找右黑线截至行60
+		 */
 		if (img[i][ColumnMax * 3 / 4] == White_Point && !REndFlag)//60
 		{
 			BlackEndR++;//右黑线截至行
 		}
-		else if (i > 1 && img[i - 1][ColumnMax * 3 / 4] == Black_Point && img[i - 2][ColumnMax * 3 / 4] == Black_Point)
+		else if (
+			i > 1 &&
+			img[i - 1][ColumnMax * 3 / 4] == Black_Point &&
+			img[i - 2][ColumnMax * 3 / 4] == Black_Point
+			)
 		{
 			REndFlag = 1;
 		}
+		/*
+		 * 找中左黑线截至行30
+		 */
 		if (img[i][30] == White_Point && !MLEndFlag)
 		{
 			BlackEndML++;
@@ -721,6 +753,9 @@ void GetBlackEndParam()//获取黑线截止行
 		{
 			MLEndFlag = 1;
 		}
+		/*
+		 * 找中右黑线截至行50
+		 */
 		if (img[i][50] == White_Point && !MREndFlag)
 		{
 			BlackEndMR++;
@@ -729,6 +764,9 @@ void GetBlackEndParam()//获取黑线截止行
 		{
 			MREndFlag = 1;
 		}
+		/*
+		 * 找左左黑线截至行10
+		 */
 		if (img[i][10] == White_Point && !LLEndFlag)
 		{
 			BlackEndLL++;
@@ -737,6 +775,9 @@ void GetBlackEndParam()//获取黑线截止行
 		{
 			LLEndFlag = 1;
 		}
+		/*
+		 * 找右右黑线截至行70
+		 */
 		if (img[i][70] == White_Point && !RREndFlag)
 		{
 			BlackEndRR++;
@@ -747,17 +788,24 @@ void GetBlackEndParam()//获取黑线截止行
 		}
 	}
 
-
+	/*
+	 * 取七个截至行的最大值
+	 * 通过一系列max函数？！
+	 */
 	BlackEndMax = MAX(BlackEndL, BlackEndM);//取大值
 	BlackEndMax = MAX(BlackEndMax, BlackEndR);
 	BlackEndMaxMax = MAX(BlackEndMax, BlackEndMR);
 	BlackEndMaxMax = MAX(BlackEndMax, BlackEndML);
 	BlackEndMaxMax = MAX(BlackEndMax, BlackEndLL);
 	BlackEndMaxMax = MAX(BlackEndMax, BlackEndRR);
+	/*
+	 * 限制最大值[0,56]
+	 */
 	if (BlackEndMaxMax >= 60)
 	{
 		BlackEndMaxMax = 58;
 	}
+	
 	DropRow = 60 - BlackEndMaxMax;//封顶的行数      
 }
 
