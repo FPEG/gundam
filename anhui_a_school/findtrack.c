@@ -463,7 +463,8 @@ void SearchCenterBlackline(void)
 		
 		/*
 		 * //上一行没找到边界，可能是十字或者环形
-		 * 全行寻找
+		 * 全行寻找？
+		 * 没看懂
 		 */
 		else if (LeftEdge[i + 1] == 0 && RightEdge[i + 1] == ColumnMax)    
 		{
@@ -492,9 +493,12 @@ void SearchCenterBlackline(void)
 		}
 #pragma endregion 边沿扫描
 #pragma region 找中线
+		//todo 畸变的定义可能写反了
+		
 		/*
 		 * 不满足畸变，这一行比上一行宽
 		 * 用上一行的中线
+		 * 
 		 */
 		if ((RightEdge[i] - LeftEdge[i]) >= (RightEdge[i + 1] - LeftEdge[i + 1] + 1))//不满足畸变 
 		{
