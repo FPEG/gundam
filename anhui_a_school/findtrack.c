@@ -4,11 +4,12 @@
 #include "findtrack.h"
 
 
-/*********define for SearchCenterBlackline**********/
+//*********define for SearchCenterBlackline**********/
 
-int   MiddleLine[RowMax + 1];
-int   RightEdge[RowMax + 1];
-int   LeftEdge[RowMax + 1];
+
+int   MiddleLine[RowMax + 1];//中线数组，行数越大越靠近车
+int   RightEdge[RowMax + 1];//右边线数组，行数越大越靠近车
+int   LeftEdge[RowMax + 1];//左边线数组，行数越大越靠近车
 int   Width[RowMax + 1] = { 2,3,3,3,4,4,5,5,6,6,
 					   8,8,10,10,12,13,14,14,16,17,
 					   18,18,20,20,22,22,24,24,26,26,
@@ -16,12 +17,12 @@ int   Width[RowMax + 1] = { 2,3,3,3,4,4,5,5,6,6,
 					   41,41,43,43,45,45,47,47,49,50,
 					   50,51,52,54,55,56,57,58,59,60,61 };;
 
-int   MidPri = 40;//当前行中点搜索起始点
-int   LastLine = 0;
-float AvaliableLines = 0;
-int   LeftLose = 0;
-int   RightLose = 0;
-int   AllLose = 0;
+int   MidPri = 40;//当前行中点搜索起始点,取40,10,70
+int   LastLine = 0;//最后一行，动态前瞻
+float AvaliableLines = 0;//有效行数
+int   LeftLose = 0;//只有左线丢的数量
+int   RightLose = 0;//只有右线丢的数量
+int   AllLose = 0;//两边线都丢的数量
 int   LeftLoseStart = 0;//记录左边丢线的开始行
 int   RightLoseStart = 0;//记录右边边丢线的开始行
 int   WhiteStart = 0;
@@ -98,9 +99,15 @@ unsigned char BreakStartLFlag = 0;
 unsigned char BreakStartR = 0;
 unsigned char BreakStartRFlag = 0;
 
-//设置中线，左线，右线的初始化值
-//设置每一行对应的赛道宽度
-//本文件内不调用
+/**
+ * \brief 设定初值
+ * \par
+ * 中线：ColumnMax / 2	\n
+ * 左线：0	\n
+ * 右线：ColumnMax
+ * \par
+ * 设置每一行对应的赛道宽度，本文件内不调用
+ */
 void SetInitVal()
 {
 	int i;
@@ -116,16 +123,25 @@ void SetInitVal()
 }
 
 
-//全行扫描和边缘结合提取赛道的中线
-//前十行全行扫描
-//后面50行，根据上一行的寻线情况来决定当前行的寻线方式和起点
-//外部调用
+//
+//
+//
+//
+/**
+ * \brief 全行扫描和边缘结合提取赛道的中线
+ * \par
+ * 前十行全行扫描
+ * \par
+ * 后面50行，根据上一行的寻线情况来决定当前行的寻线方式和起点
+ * \par
+ * 外部调用
+ */
 void SearchCenterBlackline(void)
 {
 
-	int16 i = 0;
-	int16 j = 0;
-	uint8 jj = 0;
+	int16 i = 0;//当前行数，越大越靠近车
+	int16 j = 0;//本行扫描起点,当前扫描位置
+	uint8 jj = 0;//副扫描位置，用于在剩余行和j对比
 	uint8 WhiteNum = 0;
 
 	LeftLose = 0;//变量清零
@@ -139,11 +155,13 @@ void SearchCenterBlackline(void)
 	Width[RowMax] = ColumnMax;
 
 	SetInitVal();
-	for (i = RowMax - 1; i >= 50; i--)//首先找前十行，全行扫描
-	{
-      ///寻找边界部分----------
 
-      ///找左边界
+	//首先找前十行，全行扫描
+	for (i = RowMax - 1; i >= 50; i--)
+	{
+#pragma region 寻找边界
+
+#pragma region 寻找左边界
 		if (i == RowMax - 1)//首行就以图像中心作为扫描起点
 		{
 			j = MidPri;//40 为 ColumnMax/2
@@ -152,25 +170,32 @@ void SearchCenterBlackline(void)
 		{
 			j = MiddleLine[i + 1];//否则就以上一行中点的位置作为本行扫描起点
 		}
-        ///中点不能太左
-		if (j <= 2)
-		{
-			j = 2;
-		}
-        ///从中点往左搜索
+		/*
+		 * 中点不能太左
+		 */
+		if (j <= 2) j = 2;
+		/*
+		 * 从中点往左搜索
+		 */
 		while (j >= 3)//j>=3有效范围内进行搜寻 
 		{
-			if (img[i][j] == White_Point&& img[i][j - 1] == Black_Point && img[i][j - 2] == Black_Point)//从右向左找到白白黑跳变 
+			//从右向左找到白白黑跳变 
+			if (img[i][j] == White_Point &&
+				img[i][j - 1] == Black_Point &&
+				img[i][j - 2] == Black_Point
+				)
 			{
-				LeftEdge[i] = j;//找到则赋值 找不到保持原值0///记录最左白点   
+				/*
+				 * 记录最左白点
+				 */
+				LeftEdge[i] = j;//找到则赋值 找不到保持原值0
 				break;//跳出本行寻线
 			}
 			j--;//列数往左移动
 		}
-        
-        ///对称找边界///
-        
-        ///再找右边界
+#pragma endregion 寻找左边界
+#pragma region 寻找右边界
+
 		if (i == RowMax - 1) //再找右边界
 		{
 			j = MidPri;//如果首行，从图像中心开始搜寻
@@ -185,43 +210,76 @@ void SearchCenterBlackline(void)
 		}
 		while (j <= ColumnMax - 3)
 		{
-
-			if (img[i][j] == White_Point && img[i][j + 1] == Black_Point && img[i][j + 2] == Black_Point)//从左向右找到白白黑跳变点
+			//从左向右找到白白黑跳变点
+			if (img[i][j] == White_Point &&
+				img[i][j + 1] == Black_Point &&
+				img[i][j + 2] == Black_Point
+				)
 			{
 				RightEdge[i] = j;//找到则赋值   找不到保持原值
 				break;//跳出本行寻线
 			}
 			j++;//列数往右移动
 		}
-        
-        ///对称结束
-        
-        ///判断中点部分----------
-
-		if (LeftEdge[i] != 0 && RightEdge[i] != ColumnMax)//中线判断，没有丢线
+#pragma endregion 寻找右边界
+#pragma endregion 寻找边界
+#pragma region 判断中点
+		/*
+		 * // 中线判断，没有丢线
+		 * 判断中线是否丢线
+		 */
+		if (
+			LeftEdge[i] != 0 &&
+			RightEdge[i] != ColumnMax
+			)
 		{
+			/*
+			 * 取两边中点
+			 */
 			MiddleLine[i] = (LeftEdge[i] + RightEdge[i]) / 2;
 		}
-        
-		else if (LeftEdge[i] != 0 && RightEdge[i] == ColumnMax)//丢了右线
+		
+
+		/*
+		 * //丢了右线
+		 * 判断右线是否丢线
+		 */
+		else if (
+			LeftEdge[i] != 0 && //左线没丢
+			RightEdge[i] == ColumnMax //丢了右线
+			)
 		{
 			RightLose++;//记录只有右线丢的数量
-            
-            ///可能是十字的情况，宽度突变
-			if (/**远的宽度**/(RightEdge[i] - LeftEdge[i]) >= /**近的宽度**/(RightEdge[i + 1] - LeftEdge[i + 1] + 1))//突变
+
+			/*
+			 * 可能是十字的情况，宽度突变
+			 */
+			 //突变
+			if (
+				(RightEdge[i] - LeftEdge[i]) >=  /*当前行宽*/
+				(RightEdge[i + 1] - LeftEdge[i + 1] + 1)/*前一行宽*/
+				)
 			{
 				MiddleLine[i] = MiddleLine[i + 1];//用上一行的中点    
 			}
-            ///可能是弯道的情况，宽度没有突变
+			/*
+			 *可能是弯道的情况，宽度没有突变
+			 */
 			else
 			{
 				MiddleLine[i] = LeftEdge[i] + Width[i] / 2;//正常的话就用半宽补
 			}
 		}
-        ///对称丢线///
-		else if (LeftEdge[i] == 0 && RightEdge[i] != ColumnMax)//丢了左线
+		///对称丢线///
+		/*
+		 * 判断左线是否丢线
+		 */
+		else if (
+			LeftEdge[i] == 0 && //丢了左线
+			RightEdge[i] != ColumnMax //右线没丢
+			)
 		{
-
+			LeftLose++;
 			if ((RightEdge[i] - LeftEdge[i]) >= (RightEdge[i + 1] - LeftEdge[i + 1] + 1))//突变      
 			{
 				MiddleLine[i] = MiddleLine[i + 1];//用上一行   
@@ -231,11 +289,13 @@ void SearchCenterBlackline(void)
 				MiddleLine[i] = RightEdge[i] - Width[i] / 2;//线宽
 			}
 		}
-        
+
+		/*
+		 * 判断两边是否都丢线
+		 */
 		else if (LeftEdge[i] == 0 && RightEdge[i] == ColumnMax)//两边都丢了的话  
 		{
 			AllLose++;
-
 			if (i == RowMax - 1)//如果是首行就以图像中心作为中点
 			{
 				MiddleLine[i] = MidPri;
@@ -245,31 +305,68 @@ void SearchCenterBlackline(void)
 				MiddleLine[i] = MiddleLine[i + 1];//如果不是首行就用上一行的中线作为本行中点
 			}
 		}
-        ///限制MidPri部分
-        ///中线不能太右
+
+
+#pragma endregion 判断中点
+#pragma region 限制MidPri
+		/*
+		 * 中线不能太右
+		 */
 		if (MiddleLine[RowMax - 1] >= 70)
 		{
 			MidPri = 70;
 		}
-        ///中线不能太左
+		/*
+		 * 中线不能太左
+		 */
 		else if (MiddleLine[RowMax - 1] <= 10)
 		{
 			MidPri = 10;
 		}
-        ///记录MidPri
+		/*
+		 * 记录MidPri
+		 */
 		else
 		{
 			MidPri = MiddleLine[RowMax - 1];//记录本帧图像第59行的中线值，作为下一幅图像的59行扫描起始点
 		}
-
+#pragma endregion 限制MidPri
 	}
-	for (i = 49; i > 0; i--)//查找剩余行
+
+	/*
+	 * //查找剩余行
+	 */
+	for (i = 49; i > 0; i--)
 	{
-        ///搜索边界部分 #1100
-		if (LeftEdge[i + 1] != 0 && RightEdge[i + 1] != ColumnMax) //上一行两边都找到 启用边沿扫描     
+#pragma region 边沿扫描
+
+		/*
+		 *搜索边界部分
+		 *#1100
+		 */
+		/*
+		 * 上一行找到两边
+		 */
+		if (
+			LeftEdge[i + 1] != 0 &&
+			RightEdge[i + 1] != ColumnMax
+			)
 		{
-			j = ((LeftEdge[i + 1] + 10) >= ColumnMax - 2) ? ColumnMax - 2 : (LeftEdge[i + 1] + 10);//先找左边界    
+			/*
+			 * j = min(LeftEdge[i + 1] + 10,ColumnMax - 2)
+			 * 
+			 */
+			j = (
+				(LeftEdge[i + 1] + 10) >=//前一行左线右上角10格
+				ColumnMax - 2//倒数第一列
+				) ?
+				ColumnMax - 2 :
+				(LeftEdge[i + 1] + 10);//先找左边界
+			/*
+			 * j = max((LeftEdge[i + 1] - 5),1)
+			 */
 			jj = ((LeftEdge[i + 1] - 5) <= 1) ? 1 : (LeftEdge[i + 1] - 5);
+			//j逼近jj，找到白黑跳变
 			while (j >= jj)
 			{
 				if (img[i][j] == White_Point && img[i][j - 1] == Black_Point)
@@ -279,22 +376,26 @@ void SearchCenterBlackline(void)
 				}
 				j--;
 			}
-            ///对称找边界///
+			///对称找边界///
 			j = ((RightEdge[i + 1] - 10) <= 1) ? 1 : (RightEdge[i + 1] - 10); //在找右边界   
 			jj = ((RightEdge[i + 1] + 5) >= ColumnMax - 2) ? ColumnMax - 2 : (RightEdge[i + 1] + 5);
 			while (j <= jj)
 			{
-				if (img[i][j] == White_Point&& img[i][j + 1] == Black_Point)
+				if (img[i][j] == White_Point && img[i][j + 1] == Black_Point)
 				{
 					RightEdge[i] = j;
 					break;
 				}
 				j++;
 			}
-            
-            
+
+
 		}
-        ///#1102
+
+		 /*
+		  * 上一行只找到左边
+		  * #1102
+		  */
 		else if (LeftEdge[i + 1] != 0 && RightEdge[i + 1] == ColumnMax)//上一行只找到左边界   
 		{
 			j = ((LeftEdge[i + 1] + 10) >= ColumnMax - 2) ? ColumnMax - 2 : (LeftEdge[i + 1] + 10);//左边界用边沿扫描   
@@ -308,15 +409,15 @@ void SearchCenterBlackline(void)
 				}
 				j--;
 			}
-            
-            
+
+
 			j = MiddleLine[i + 1];//上一行丢了右边界用全行扫描 
-            ///可能是废话
+			///可能是废话
 			if (j >= 78)//ColumnMax	80   列数
 			{
 				j = 78;
 			}
-            
+
 			while (j <= ColumnMax - 2)
 			{
 				if (img[i][j] == White_Point && img[i][j + 1] == Black_Point)
@@ -327,14 +428,17 @@ void SearchCenterBlackline(void)
 				j++;
 			}
 
-		}
+		} 
+		/*
+		  * 上一行只找到右边 
+		  */
 		else if (LeftEdge[i + 1] == 0 && RightEdge[i + 1] != ColumnMax) //上一行只找到右边界      
 		{
 			j = ((RightEdge[i + 1] - 10) <= 1) ? 1 : (RightEdge[i + 1] - 10);//边缘追踪找右边界 
 			jj = ((RightEdge[i + 1] + 5) >= ColumnMax - 2) ? ColumnMax - 2 : (RightEdge[i + 1] + 5);
 			while (j <= jj)
 			{
-				if (img[i][j] == White_Point&&img[i][j + 1] == Black_Point)
+				if (img[i][j] == White_Point && img[i][j + 1] == Black_Point)
 				{
 					RightEdge[i] = j;
 					break;
@@ -356,9 +460,13 @@ void SearchCenterBlackline(void)
 				j--;
 			}
 		}
-		else if (LeftEdge[i + 1] == 0 && RightEdge[i + 1] == ColumnMax)  //上一行没找到边界，可能是十字或者环形  
+		
+		/*
+		 * //上一行没找到边界，可能是十字或者环形
+		 * 全行寻找
+		 */
+		else if (LeftEdge[i + 1] == 0 && RightEdge[i + 1] == ColumnMax)    
 		{
-
 			j = MiddleLine[i + 1];   //找全行找左边界
 			while (j >= 1)
 			{
@@ -369,10 +477,11 @@ void SearchCenterBlackline(void)
 				}
 				j--;
 			}
+			
 			j = MiddleLine[i + 1];   //全行找右边界   
 			while (j <= ColumnMax - 2)
 			{
-				if (img[i][j] == White_Point&&img[i][j + 1] == Black_Point)
+				if (img[i][j] == White_Point && img[i][j + 1] == Black_Point)
 				{
 					RightEdge[i] = j;
 					break;
@@ -381,33 +490,66 @@ void SearchCenterBlackline(void)
 
 			}
 		}
+#pragma endregion 边沿扫描
+#pragma region 找中线
+		/*
+		 * 不满足畸变，这一行比上一行宽
+		 * 用上一行的中线
+		 */
 		if ((RightEdge[i] - LeftEdge[i]) >= (RightEdge[i + 1] - LeftEdge[i + 1] + 1))//不满足畸变 
 		{
 			MiddleLine[i] = MiddleLine[i + 1];//用上一行
 		}
+		/*
+		 * 满足畸变，这一行比上一行窄
+		 * 复杂判断
+		 */
 		else
 		{
+			/*
+			 * 两边都没到底
+			 * 用正常中线
+			 */
 			if (LeftEdge[i] != 0 && RightEdge[i] != ColumnMax)
 			{
 				MiddleLine[i] = (LeftEdge[i] + RightEdge[i]) / 2;
 
 				//对斜出十字进行纠正
 
-				if (MiddleLine[i] - MiddleLine[i + 1] > 8 && ((ABS(LeftEdge[i] - LeftEdge[i + 1] > 3) || ABS(RightEdge[i] - RightEdge[i + 1] > 3))) && i >= 30)//中线向右突变
+
+				/*
+				 * 中线向右突变
+				 */
+				if (MiddleLine[i] - MiddleLine[i + 1] > 8 && //中线右偏大于8格
+					((
+						ABS(LeftEdge[i] - LeftEdge[i + 1] > 3) ||//左边线改变大于3格
+						ABS(RightEdge[i] - RightEdge[i + 1] > 3)//右边线改变大于3格
+						)) && 
+					i >= 30)//距离车小于30格
 				{
 					uint8 ii = i;
 
+					/*
+					 * 用k=1的斜线/修正之前的中线至距离车10格
+					 */
 					while (1)
 					{
 						MiddleLine[ii + 1] = MiddleLine[ii] - 1;
 						ii++;
 
-						if (ii >= 50 || (MiddleLine[ii] - MiddleLine[ii + 1] <= 1))
+						
+						if (ii >= 50 || //一直到距离车10格
+							(MiddleLine[ii] - MiddleLine[ii + 1] <= 1)//纠正当前格与纠正参数相比小于1
+							)
 						{
 							break;
 						}
 					}
 				}
+
+				/*
+				 * 中线向左突变
+				 */
 				if ((MiddleLine[i + 1] - MiddleLine[i] > 8) && ((ABS(LeftEdge[i] - LeftEdge[i + 1] > 3) || ABS(RightEdge[i] - RightEdge[i + 1] > 3))) && i >= 30)///向左突变
 				{
 					uint8 ii = i;
@@ -423,7 +565,12 @@ void SearchCenterBlackline(void)
 						}
 					}
 				}
+
+
 			}
+			/*
+			 * 右边线丢失
+			 */
 			else if (LeftEdge[i] != 0 && RightEdge[i] == ColumnMax)//find left
 			{
 				RightLose++;
@@ -437,7 +584,9 @@ void SearchCenterBlackline(void)
 					MiddleLine[i] = LeftEdge[i] + Width[i] / 2;
 				}
 			}
-
+			/*
+			 * 左边线丢失
+			 */
 			else if (LeftEdge[i] == 0 && RightEdge[i] != ColumnMax)//find right
 			{
 				LeftLose++;
@@ -454,6 +603,9 @@ void SearchCenterBlackline(void)
 					MiddleLine[i] = RightEdge[i] - Width[i] / 2;
 				}
 			}
+			/*
+			 * 两边线都丢
+			 */
 			else if (LeftEdge[i] == 0 && RightEdge[i] == ColumnMax)//两边丢线    
 			{
 				WhiteNum++;
@@ -467,14 +619,19 @@ void SearchCenterBlackline(void)
 			}
 
 		}
-
+#pragma endregion 找中线
+#pragma region 找有效截至行
+		/*
+		 * 到这里是最后一行就停止执行后面的语句
+		 */
 		if (i == 0)
 		{
 			AvaliableLines = 60;
 			LastLine = 0;
 			break;
 		}
-		uint16 m = MiddleLine[i];
+		
+		uint16 m = MiddleLine[i];//中线的[5,75]限值
 		if (m < 5)
 		{
 			m = 5;
@@ -483,12 +640,25 @@ void SearchCenterBlackline(void)
 		{
 			m = 75;
 		}
-		if ((LeftEdge[i] != 0 && LeftEdge[i] >= 65) || (RightEdge[i] != ColumnMax && RightEdge[i] < 15) || (i >= 1) && (img[i - 1][m] == Black_Point)) //最后一行              
+		//最后一行   
+		if (
+			(
+				LeftEdge[i] != 0 && //左边线在[65,80]
+				LeftEdge[i] >= 65
+				) || 
+			(
+				RightEdge[i] != ColumnMax && 
+				RightEdge[i] < 15 //右边线在[0,15]
+				) || 
+			(i >= 1) && //不是最远一行
+			(img[i - 1][m] == Black_Point)//后一行的中线[5,75]限值是黑
+			)            
 		{
 			LastLine = i;//最后一行，动态前瞻
 			AvaliableLines = 60 - i;//有效行数
 			break;
 		}
+#pragma endregion 找有效截至行
 	}
 }
 
@@ -629,7 +799,7 @@ void FindInflectionPoint()
 
 	for (i = 59; i >= 25; i--)//不能扫描太远，否则会误判
 	{
-		if (RightEdge[i] != ColumnMax&&RightEdge[i - 1] != ColumnMax&&RightEdge[i + 1] != ColumnMax) //连续三行不丢线
+		if (RightEdge[i] != ColumnMax && RightEdge[i - 1] != ColumnMax && RightEdge[i + 1] != ColumnMax) //连续三行不丢线
 		{
 
 			if ((RightEdge[i] - RightEdge[i + 1] <= 0) && (RightEdge[i - 1] - RightEdge[i]) > 0)//找到右边线有拐点
@@ -665,7 +835,7 @@ void FindInflectionPoint()
 
 	//可以同时找到两个拐点，开始识别环路(或许可以考虑一下，如果只找到一个拐点的情况，这样就能更容易识别到环路)
 
-	if (LeftInflectionPointFlag&&RightInflectionPointFlag)//同时找到两个拐点
+	if (LeftInflectionPointFlag && RightInflectionPointFlag)//同时找到两个拐点
 	{
 		StartCol = (unsigned int)((LeftInflectionPointCol + RightInflectionPointCol) / 2);// 取左右拐点的列坐标平均值
 
@@ -673,7 +843,7 @@ void FindInflectionPoint()
 
 		for (i = StartRow; i >= 8; i--)//固定一列（StartCol）从开始的行往上扫描，寻找环路中间的圆的特征（找到一个白到黑的跳变，然后多行黑的然后到白）
 		{
-			if (img[i][StartCol] == White_Point&&img[i - 1][StartCol] == Black_Point)
+			if (img[i][StartCol] == White_Point && img[i - 1][StartCol] == Black_Point)
 			{
 
 				LoopBorttomRow = i - 1;//记录第一次跳变的行
@@ -691,7 +861,7 @@ void FindInflectionPoint()
 
 			while (i_i >= 8)
 			{
-				if (img[i_i][StartCol] == Black_Point&&img[i_i - 1][StartCol] == White_Point)
+				if (img[i_i][StartCol] == Black_Point && img[i_i - 1][StartCol] == White_Point)
 				{
 
 
@@ -713,7 +883,7 @@ void FindInflectionPoint()
 
 			while (i_i_i > 8)
 			{
-				if (img[i_i_i][StartCol] == White_Point&&img[i_i_i - 1][StartCol] == Black_Point)//由白到黑跳变，找到
+				if (img[i_i_i][StartCol] == White_Point && img[i_i_i - 1][StartCol] == Black_Point)//由白到黑跳变，找到
 				{
 					LoopTopRow = i_i_i - 1;
 
@@ -779,7 +949,7 @@ void FindLoopExit()
 
 		for (j = StartCol; j < 76; j++)
 		{
-			if (img[MilldlePonit][j] == Black_Point&&img[MilldlePonit][j + 1] == Black_Point&&img[MilldlePonit][j + 2] == White_Point)
+			if (img[MilldlePonit][j] == Black_Point && img[MilldlePonit][j + 1] == Black_Point && img[MilldlePonit][j + 2] == White_Point)
 			{
 
 				LoopRight = j + 1;
@@ -793,7 +963,7 @@ void FindLoopExit()
 
 				while (j_j < 76)
 				{
-					if (img[MilldlePonit][j_j] == White_Point&&img[MilldlePonit][j_j + 1] == White_Point&&img[MilldlePonit][j_j + 2] == Black_Point)
+					if (img[MilldlePonit][j_j] == White_Point && img[MilldlePonit][j_j + 1] == White_Point && img[MilldlePonit][j_j + 2] == Black_Point)
 					{
 						LoopRightR = j_j + 2;
 
@@ -814,7 +984,7 @@ void FindLoopExit()
 
 		for (j = StartCol; j > 3; j--)
 		{
-			if (img[MilldlePonit][j] == Black_Point&&img[MilldlePonit][j - 1] == Black_Point&&img[MilldlePonit][j - 2] == White_Point)
+			if (img[MilldlePonit][j] == Black_Point && img[MilldlePonit][j - 1] == Black_Point && img[MilldlePonit][j - 2] == White_Point)
 			{
 
 				LoopLeft = j - 1;
@@ -828,7 +998,7 @@ void FindLoopExit()
 
 				while (jj > 3)
 				{
-					if (img[MilldlePonit][jj] == White_Point&&img[MilldlePonit][jj - 1] == White_Point&&img[MilldlePonit][jj - 2] == Black_Point)
+					if (img[MilldlePonit][jj] == White_Point && img[MilldlePonit][jj - 1] == White_Point && img[MilldlePonit][jj - 2] == Black_Point)
 					{
 						LoopLeftL = jj - 2;
 						break;
@@ -858,7 +1028,7 @@ void FindLoopExit()
 		{
 			for (i = MilldlePonit; i > 5; i--)
 			{
-				if (img[i][j] == White_Point&&img[i - 1][j] == Black_Point)
+				if (img[i][j] == White_Point && img[i - 1][j] == Black_Point)
 				{
 					BigLooptUp[j] = i - 1;
 					break;
@@ -915,7 +1085,7 @@ void FindLoopExit()
 			BigLoopRightUp[i] = 0;
 		}
 
-		if ((!LeftUpExitFlag) && (!RightUpExitFlag) && LoopFlag&&LoopLeftControlFlag == 0 && LoopRightControlFlag == 0)//这里改过
+		if ((!LeftUpExitFlag) && (!RightUpExitFlag) && LoopFlag && LoopLeftControlFlag == 0 && LoopRightControlFlag == 0)//这里改过
 		{
 
 			if (StartCol >= 39)
@@ -931,7 +1101,7 @@ void FindLoopExit()
 						if (img[i][j + 1] == White_Point)//先判断前一行是不是白的
 						{
 
-							if (img[i][j] == White_Point&&img[i][j - 1] == Black_Point)//由白到黑跳变
+							if (img[i][j] == White_Point && img[i][j - 1] == Black_Point)//由白到黑跳变
 							{
 
 								BigLoopLeftUp[i] = j - 1;
@@ -997,7 +1167,7 @@ void FindLoopExit()
 
 				}
 
-				if (BreakEndLFlag&&BreakStartLFlag)
+				if (BreakEndLFlag && BreakStartLFlag)
 				{
 					if (ABS(BreakStartL - BreakEndL >= 6))
 					{
@@ -1022,7 +1192,7 @@ void FindLoopExit()
 						if (img[i][j - 1] == White_Point)
 						{
 
-							if (img[i][j] == White_Point&&img[i][j + 1] == Black_Point)
+							if (img[i][j] == White_Point && img[i][j + 1] == Black_Point)
 							{
 
 								BigLoopRightUp[i] = j - 1;
@@ -1084,7 +1254,7 @@ void FindLoopExit()
 
 				}
 
-				if (BreakEndRFlag&&BreakStartRFlag)
+				if (BreakEndRFlag && BreakStartRFlag)
 				{
 					if (ABS(BreakStartR - BreakEndR >= 6))
 					{
@@ -1191,7 +1361,7 @@ void LoopRepair()
 
 		}
 
-		if (ClearLoopControlFlag&&LeftEdge[45] != 0 && LeftEdge[46] != 0)//清标志
+		if (ClearLoopControlFlag && LeftEdge[45] != 0 && LeftEdge[46] != 0)//清标志
 		{
 			// gpio_set   (PTB19, 0);
 			LoopRightControlFlag = 0;
@@ -1231,7 +1401,7 @@ void LoopRepair()
 
 
 
-		if (ClearLoopControlFlag&&RightEdge[45] != 80 && RightEdge[46] != 80)
+		if (ClearLoopControlFlag && RightEdge[45] != 80 && RightEdge[46] != 80)
 		{
 			LoopRightControlFlag = 0;
 			LoopLeftControlFlag = 0;
@@ -1266,7 +1436,7 @@ void LoopExitRepair()
 	static unsigned char  InLoopDlay = 0;
 
 
-	if (MotivateLoopDlayFlagL&&OpenLoopExitRepairFlagL == 0 && MotivateLoopDlayFlagR == 0)//在环道里面,关了环道识别和十字识别
+	if (MotivateLoopDlayFlagL && OpenLoopExitRepairFlagL == 0 && MotivateLoopDlayFlagR == 0)//在环道里面,关了环道识别和十字识别
 	{
 		OpenLoopExitRepairNumL++;//开个小延时
 
@@ -1350,7 +1520,7 @@ void LoopExitRepair()
 
 		}
 
-		if (ClearInLoopLeftInflectionPointFlag && (LastInLoopLeftInflectionPointFlag&&LastLastInLoopLeftInflectionPointFlag && !InLoopLeftInflectionPointFlag))
+		if (ClearInLoopLeftInflectionPointFlag && (LastInLoopLeftInflectionPointFlag && LastLastInLoopLeftInflectionPointFlag && !InLoopLeftInflectionPointFlag))
 		{
 			gpio_set(PTB19, 0);
 			ClearInLoopLeftInflectionPointFlag = 0;
@@ -1366,7 +1536,7 @@ void LoopExitRepair()
 	}
 
 	//右边
-	if (MotivateLoopDlayFlagR&&OpenLoopExitRepairFlagR == 0 && MotivateLoopDlayFlagL == 0)//在环道里面,关了环道识别和十字识别
+	if (MotivateLoopDlayFlagR && OpenLoopExitRepairFlagR == 0 && MotivateLoopDlayFlagL == 0)//在环道里面,关了环道识别和十字识别
 	{
 
 		OpenLoopExitRepairNumR++;//开个小延时
@@ -1447,7 +1617,7 @@ void LoopExitRepair()
 		}
 
 
-		if (ClearInLoopRightInflectionPointFlag && (LastInLoopRightInflectionPointFlag&&LastLastInLoopRightInflectionPointFlag && (!InLoopRightInflectionPointFlag)))
+		if (ClearInLoopRightInflectionPointFlag && (LastInLoopRightInflectionPointFlag && LastLastInLoopRightInflectionPointFlag && (!InLoopRightInflectionPointFlag)))
 
 		{
 			gpio_set(PTB19, 0);
