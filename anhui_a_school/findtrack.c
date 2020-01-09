@@ -817,6 +817,9 @@ void GetBlackEndParam()//获取黑线截止行
 //找左右拐点，识别环
 //一直都要开着
 
+/**0
+ * \brief //寻找拐点
+ */
 void FindInflectionPoint()
 {
 
