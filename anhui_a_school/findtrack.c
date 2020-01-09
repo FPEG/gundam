@@ -23,6 +23,7 @@ float AvaliableLines = 0;//有效行数
 int   LeftLose = 0;//只有左线丢的数量
 int   RightLose = 0;//只有右线丢的数量
 int   AllLose = 0;//两边线都丢的数量
+
 int   LeftLoseStart = 0;//记录左边丢线的开始行
 int   RightLoseStart = 0;//记录右边边丢线的开始行
 int   WhiteStart = 0;
