@@ -14,6 +14,9 @@ void set_vector_handler(VECTORn_t , void pfunc_handler(void));      //设置中断函
 
 
 
+/**
+ * \brief 功能简介
+ */
 void HardWare_Init(void) 
 {
         DisableInterrupts;

@@ -6,7 +6,7 @@
 #define S3010_HZ    50       //舵机的频率
 
 #define SteerMax 565     //舵机最大值
-#define SteerMin  405    //舵机中值
+#define SteerMin  405    //舵机中值  /* 这个中值和最小值是不是反了*/
 #define SteerMidle 480   //舵机最小值
 
 extern float  LastError;
