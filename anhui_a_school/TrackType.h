@@ -4,7 +4,7 @@
 #include "common.h"
 #include "include.h"
 
-#define ObstacleOpen  1//打开障碍
+#define ObstacleOpen  0//关闭障碍
 
 extern unsigned char  CrossFlag ;//十字标志
 extern unsigned char CloseLoopFlag;
