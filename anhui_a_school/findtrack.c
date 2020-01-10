@@ -83,7 +83,6 @@ unsigned char ClearLoopControlFlag = 0;
 unsigned char LoopRightControlFlag = 0;
 unsigned char LoopLeftControlFlag = 0;
 int MotivateLoopDlayFlagR = 0;
-int MotivateLoopDlayFlagL = 0;
 unsigned char InLoopLeftInflectionPointFlag = 0;
 unsigned int InLoopLeftInflectionPointRow = 0;
 unsigned char MotivateLoopDlayFlagLOK = 0;
